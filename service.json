@@ -11,8 +11,8 @@
     "NODE_ENV": "development"
   },
   "globalenv": {
-    "NODE": "${SERVICE_ROOT}/node",
-    "NODE_HOME": "${SERVICE_ROOT}"
+    "NODE": "${SERVICE_ARTIFACT_COMMAND}",
+    "NODE_HOME": "${SERVICE_ARTIFACT_ROOT}"
   },
   "urls": [
     {

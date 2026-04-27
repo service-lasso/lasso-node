@@ -71,4 +71,7 @@ The service manifest declares:
 - native archive acquisition from GitHub releases
 - Node `v24.15.0` as the default runtime artifact
 - `NODE_ENV`, `NODE`, and `NODE_HOME` provider/global environment hints
+- `NODE` resolves from `${SERVICE_ARTIFACT_COMMAND}` and `NODE_HOME` resolves
+  from `${SERVICE_ARTIFACT_ROOT}`, so consumers use the exact acquired artifact
+  selected by Service Lasso
 - process/provider health using `node --version`
