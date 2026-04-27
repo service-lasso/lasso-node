@@ -23,7 +23,7 @@ jobs:
             platform: linux
             node-version: v24.15.0
             artifact: dist/lasso-node-v24.15.0-linux.tar.gz
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin
             node-version: v24.15.0
             artifact: dist/lasso-node-v24.15.0-darwin.tar.gz
@@ -35,7 +35,7 @@ jobs:
             platform: linux
             node-version: v25.9.0
             artifact: dist/lasso-node-v25.9.0-linux.tar.gz
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin
             node-version: v25.9.0
             artifact: dist/lasso-node-v25.9.0-darwin.tar.gz
