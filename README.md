@@ -68,6 +68,7 @@ npm test
 The service manifest declares:
 
 - provider role with no managed daemon start requirement
+- canonical `healthchecks[]` process readiness with stable `node-version` id
 - native archive acquisition from GitHub releases
 - Node `v24.15.0` as the default runtime artifact
 - `NODE_ENV`, `NODE`, and `NODE_HOME` provider/global environment hints
