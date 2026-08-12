@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { chmod, cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, readlink, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -47,6 +47,64 @@ function run(command, args, options = {}) {
 
 function versionedAssetName(version, platform, archiveType) {
   return `lasso-node-${version}-${platform}.${archiveType === "zip" ? "zip" : "tar.gz"}`;
+}
+
+function isWithinRoot(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
+function isAbsoluteLinkTarget(target) {
+  return path.posix.isAbsolute(target) || path.win32.isAbsolute(target);
+}
+
+export async function verifyPortableSymlinks(packageRoot) {
+  const canonicalRoot = await realpath(packageRoot);
+  const pending = [canonicalRoot];
+  let symlinkCount = 0;
+
+  while (pending.length > 0) {
+    const directory = pending.pop();
+    const entries = await readdir(directory, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name);
+      const stats = await lstat(entryPath);
+
+      if (stats.isSymbolicLink()) {
+        symlinkCount += 1;
+        const target = await readlink(entryPath);
+        if (isAbsoluteLinkTarget(target)) {
+          throw new Error(`Package symlink "${path.relative(canonicalRoot, entryPath)}" has an absolute target.`);
+        }
+
+        const lexicalTarget = path.resolve(path.dirname(entryPath), target);
+        if (!isWithinRoot(canonicalRoot, lexicalTarget)) {
+          throw new Error(`Package symlink "${path.relative(canonicalRoot, entryPath)}" escapes the package root.`);
+        }
+
+        let resolvedTarget;
+        try {
+          resolvedTarget = await realpath(entryPath);
+        } catch (error) {
+          throw new Error(`Package symlink "${path.relative(canonicalRoot, entryPath)}" is broken or cyclic.`, {
+            cause: error,
+          });
+        }
+
+        if (!isWithinRoot(canonicalRoot, resolvedTarget)) {
+          throw new Error(`Package symlink "${path.relative(canonicalRoot, entryPath)}" resolves outside the package root.`);
+        }
+        continue;
+      }
+
+      if (stats.isDirectory()) {
+        pending.push(entryPath);
+      }
+    }
+  }
+
+  return { symlinkCount };
 }
 
 async function download(url, destination) {
@@ -121,7 +179,8 @@ export async function packageNode(platform = targetPlatform, version = nodeVersi
     throw new Error(`Expected Node.js binary was not found at ${binaryPath}`);
   }
 
-  await cp(extractedDistributionRoot, packageRoot, { recursive: true });
+  await cp(extractedDistributionRoot, packageRoot, { recursive: true, verbatimSymlinks: true });
+  await verifyPortableSymlinks(packageRoot);
   if (target.archiveType !== "zip") {
     await chmod(path.join(packageRoot, target.binary), 0o755);
   }
