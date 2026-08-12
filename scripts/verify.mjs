@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { packageNode } from "./package.mjs";
+import { packageNode, verifyPortableSymlinks } from "./package.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const platform = process.env.TARGET_PLATFORM ?? process.platform;
@@ -87,6 +87,7 @@ const binaryPath = path.join(extractRoot, binary);
 await rm(verifyRoot, { recursive: true, force: true });
 await mkdir(extractRoot, { recursive: true });
 await run("tar", ["-xf", artifact, "-C", extractRoot]);
+const portableLinks = await verifyPortableSymlinks(extractRoot);
 
 const packageMetadata = JSON.parse(
   await readFile(path.join(extractRoot, "SERVICE-LASSO-PACKAGE.json"), "utf8"),
@@ -106,4 +107,6 @@ if (nodeVersion.stdout.trim() !== version) {
   throw new Error(`Expected ${version}, got ${nodeVersion.stdout.trim()}`);
 }
 
-console.log(`[lasso-node] verification passed for ${version} on ${platform}`);
+console.log(
+  `[lasso-node] verification passed for ${version} on ${platform}; ${portableLinks.symlinkCount} portable symlinks verified`,
+);

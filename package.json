@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "package": "node scripts/package.mjs",
-    "test": "node scripts/verify.mjs",
+    "test": "npm run test:portable-links && node scripts/verify.mjs",
+    "test:portable-links": "node --test scripts/portable-symlinks.test.mjs",
     "release:verify": "node scripts/verify.mjs"
   }
 }
