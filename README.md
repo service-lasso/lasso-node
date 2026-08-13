@@ -69,6 +69,7 @@ The service manifest declares:
 
 - provider role with no managed daemon start requirement
 - canonical `healthchecks[]` process readiness with stable `node-version` id
+- canonical `endpoints[]` metadata for the public Node.js documentation URL
 - native archive acquisition from GitHub releases
 - Node `v24.15.0` as the default runtime artifact
 - `NODE_ENV`, `NODE`, and `NODE_HOME` provider/global environment hints
@@ -76,3 +77,4 @@ The service manifest declares:
   from `${SERVICE_ARTIFACT_ROOT}`, so consumers use the exact acquired artifact
   selected by Service Lasso
 - process/provider health using `node --version`
+- no legacy `ports`, `portmapping`, or `urls` authoring surfaces

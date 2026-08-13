@@ -13,6 +13,19 @@ function assertServiceManifestContract(manifest) {
     throw new Error("service.json must use healthchecks[] instead of singular healthcheck.");
   }
 
+  const legacyEndpointFields = [
+    "ports",
+    "portmapping",
+    "urls",
+    "serviceport",
+    "serviceportsecondary",
+    "serviceportconsole",
+    "serviceportdebug",
+  ].filter((field) => Object.hasOwn(manifest, field));
+  if (legacyEndpointFields.length > 0) {
+    throw new Error(`service.json must use endpoints[] instead of legacy endpoint fields: ${legacyEndpointFields.join(", ")}`);
+  }
+
   const invalidTcpAliases = ["tcphost", "tcpport"].filter((field) => Object.hasOwn(manifest, field));
   if (invalidTcpAliases.length > 0) {
     throw new Error(`service.json must not use TCP alias fields: ${invalidTcpAliases.join(", ")}`);
@@ -43,6 +56,39 @@ function assertServiceManifestContract(manifest) {
   const nodeVersionCheck = manifest.healthchecks.find((check) => check.id === "node-version");
   if (!nodeVersionCheck || nodeVersionCheck.type !== "process") {
     throw new Error('service.json must include a process healthcheck with id "node-version".');
+  }
+
+  if (!Array.isArray(manifest.endpoints) || manifest.endpoints.length === 0) {
+    throw new Error("service.json must declare canonical endpoints[] entries for service interfaces and resources.");
+  }
+
+  const endpointIds = new Set();
+  for (const endpoint of manifest.endpoints) {
+    if (!endpoint || typeof endpoint !== "object") {
+      throw new Error("Each service.json endpoint must be an object.");
+    }
+    if (typeof endpoint.id !== "string" || !/^[a-z][a-z0-9_]*$/.test(endpoint.id)) {
+      throw new Error(`Endpoint id must be selector-safe lower snake case: ${JSON.stringify(endpoint.id)}`);
+    }
+    if (endpointIds.has(endpoint.id)) {
+      throw new Error(`Duplicate service.json endpoint id: ${endpoint.id}`);
+    }
+    endpointIds.add(endpoint.id);
+
+    const variableBlocks = ["env", "globalenv", "export", "exports"].filter((field) => Object.hasOwn(endpoint, field));
+    if (variableBlocks.length > 0) {
+      throw new Error(`Endpoint ${endpoint.id} must not contain variable blocks: ${variableBlocks.join(", ")}`);
+    }
+  }
+
+  const docsEndpoint = manifest.endpoints.find((endpoint) => endpoint.id === "docs");
+  if (
+    !docsEndpoint ||
+    docsEndpoint.kind !== "url" ||
+    docsEndpoint.url !== "https://nodejs.org" ||
+    docsEndpoint.exposure !== "public"
+  ) {
+    throw new Error("service.json must expose the Node.js documentation link as canonical endpoint docs.");
   }
 }
 
