@@ -22,11 +22,14 @@
     "NODE": "${SERVICE_ARTIFACT_COMMAND}",
     "NODE_HOME": "${SERVICE_ARTIFACT_ROOT}"
   },
-  "urls": [
+  "endpoints": [
     {
-      "label": "docs",
+      "id": "docs",
+      "kind": "url",
+      "label": "Node.js documentation",
       "url": "https://nodejs.org",
-      "kind": "external"
+      "exposure": "public",
+      "required": false
     }
   ],
   "artifact": {
