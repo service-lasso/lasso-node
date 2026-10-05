@@ -1,0 +1,6 @@
+# SPEC-001: Node22 compatibility
+Active Development specification for lasso-node #13 and lesson-todo #3.
+- N22-1: Publish alongside existing Node24/25 assets official v22.23.3 x64 Windows/Linux/macOS assets with current naming conventions; preserve the default Node24 service manifest.
+- N22-2: Before extraction, hash every upstream archive including cached downloads against its exact official version SHASUMS256.txt entry. Fail closed on missing, duplicate, malformed, or mismatched checksum. Record digest and checksum URL in package metadata.
+- N22-3: Verify extracted runtime version, architecture, filesystem, crypto, and HTTP capability. Record Node22 Darwin compatibility as macOS 11 x64; actual macOS 11.7.11 qualification is required before consumer acceptance.
+- N22-4: Exact candidate source/CI verification precedes owner-authorized publication. Preserve failed legacy-node evidence. Published artifact consumer acceptance is separate from source tests and no GA claim is implied.

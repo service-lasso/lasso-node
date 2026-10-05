@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { chmod, cp, lstat, mkdir, readlink, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -126,6 +128,17 @@ async function download(url, destination) {
   await writeFile(destination, bytes);
 }
 
+export function verifyUpstreamChecksum(bytes, sums, asset) {
+  const entries = sums.split(/\r?\n/).filter((line) => line.trim().split(/\s+/).at(-1)?.replace(/^\*/, "") === asset);
+  if (entries.length !== 1 || !/^[a-f0-9]{64}\s+\*?[^\s]+$/.test(entries[0])) {
+    throw new Error(`Expected one valid official checksum for ${asset}`);
+  }
+  const expected = entries[0].slice(0, 64);
+  const actual = createHash("sha256").update(bytes).digest("hex");
+  if (actual !== expected) throw new Error(`Official upstream checksum mismatch for ${asset}`);
+  return actual;
+}
+
 async function compressPackage(packageRoot, outputPath, archiveType) {
   await mkdir(path.dirname(outputPath), { recursive: true });
   await rm(outputPath, { force: true });
@@ -171,6 +184,10 @@ export async function packageNode(platform = targetPlatform, version = nodeVersi
   await mkdir(packageRoot, { recursive: true });
 
   await download(upstreamUrl, upstreamArchive);
+  const checksumUrl = `https://nodejs.org/dist/${version}/SHASUMS256.txt`;
+  const checksumResponse = await fetch(checksumUrl);
+  if (!checksumResponse.ok) throw new Error(`Failed to download official checksums: ${checksumResponse.status}`);
+  const sha256 = verifyUpstreamChecksum(await readFile(upstreamArchive), await checksumResponse.text(), upstreamAsset);
   run("tar", ["-xf", upstreamArchive, "-C", extractRoot]);
 
   const extractedDistributionRoot = path.join(extractRoot, upstreamRootName);
@@ -195,10 +212,13 @@ export async function packageNode(platform = targetPlatform, version = nodeVersi
           version,
           asset: upstreamAsset,
           url: upstreamUrl,
+          sha256,
+          checksumUrl,
         },
         packagedBy: "service-lasso/lasso-node",
         platform,
         arch: "x64",
+        ...(platform === "darwin" && version.startsWith("v22.") ? { minimumOsVersion: "11.0", compatibilitySource: `https://github.com/nodejs/node/blob/${version}/BUILDING.md` } : {}),
         command: target.command,
       },
       null,

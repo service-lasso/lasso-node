@@ -143,7 +143,9 @@ if (
   packageMetadata.upstream?.repo !== "nodejs/node" ||
   packageMetadata.upstream?.version !== version ||
   packageMetadata.packagedBy !== "service-lasso/lasso-node" ||
-  packageMetadata.platform !== platform
+  packageMetadata.platform !== platform ||
+  packageMetadata.arch !== "x64" ||
+  !/^[a-f0-9]{64}$/.test(packageMetadata.upstream?.sha256 ?? "")
 ) {
   throw new Error(`Unexpected package metadata: ${JSON.stringify(packageMetadata)}`);
 }
@@ -152,6 +154,9 @@ const nodeVersion = await run(binaryPath, ["--version"], { cwd: extractRoot });
 if (nodeVersion.stdout.trim() !== version) {
   throw new Error(`Expected ${version}, got ${nodeVersion.stdout.trim()}`);
 }
+
+const runtimeProbe = await run(binaryPath, [path.join(repoRoot, "scripts", "runtime-probe.mjs")], { cwd: extractRoot });
+console.log(runtimeProbe.stdout.trim());
 
 console.log(
   `[lasso-node] verification passed for ${version} on ${platform}; ${portableLinks.symlinkCount} portable symlinks verified`,
