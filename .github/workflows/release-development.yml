@@ -17,6 +17,7 @@ jobs:
       version: ${{ steps.bind.outputs.version }}
     env:
       CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - id: bind
         shell: bash
@@ -24,6 +25,9 @@ jobs:
           set -euo pipefail
           [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$CANDIDATE_SHA" = "$GITHUB_SHA"
+          # Never let dispatch silently create an unprotected publication environment.
+          gh api "repos/$GITHUB_REPOSITORY/environments/development-candidate" > environment.json
+          node -e 'const e=JSON.parse(require("fs").readFileSync("environment.json")); if (!e.protection_rules?.some(r => r.type === "required_reviewers" && r.reviewers?.length)) throw Error("development-candidate requires an existing owner approval rule");'
           version="$(date -u +%Y.%-m.%-d)-${CANDIDATE_SHA:0:7}"
           echo "sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
