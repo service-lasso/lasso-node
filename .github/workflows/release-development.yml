@@ -6,6 +6,9 @@ on:
         description: Exact 40-character develop SHA explicitly authorized for publication
         required: true
         type: string
+concurrency:
+  group: node-development-publication-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -154,7 +157,13 @@ jobs:
           # Read endpoint status explicitly; an auth or network failure is not absence.
           status=$(curl -sS -o existing-release.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$CANDIDATE_VERSION")
           test "$status" = 404
-          gh release create "$CANDIDATE_VERSION" release-assets/* --repo "$GITHUB_REPOSITORY" --target "$CANDIDATE_SHA" --title "$CANDIDATE_VERSION" --prerelease --latest=false --notes "Node development candidate from $CANDIDATE_SHA. Includes verified Node22 compatibility assets; does not declare GA."
+          ref_status=$(curl -sS -o existing-tag.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/git/ref/tags/$CANDIDATE_VERSION")
+          test "$ref_status" = 404
+          # GitHub creates a new ref atomically and rejects a concurrent existing ref.
+          # This is never a force update or reuse of an existing tag.
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$CANDIDATE_VERSION" -f "sha=$CANDIDATE_SHA"
+          test "$(gh api repos/$GITHUB_REPOSITORY/git/ref/tags/$CANDIDATE_VERSION --jq .object.sha)" = "$CANDIDATE_SHA"
+          gh release create "$CANDIDATE_VERSION" release-assets/* --repo "$GITHUB_REPOSITORY" --verify-tag --title "$CANDIDATE_VERSION" --prerelease --latest=false --notes "Node development candidate from $CANDIDATE_SHA. Includes verified Node22 compatibility assets; does not declare GA."
           gh release view "$CANDIDATE_VERSION" --repo "$GITHUB_REPOSITORY" --json tagName,targetCommitish,isPrerelease,assets > publication.json
           test "$(gh api repos/$GITHUB_REPOSITORY/git/ref/tags/$CANDIDATE_VERSION --jq .object.sha)" = "$CANDIDATE_SHA"
           mkdir published-readback
