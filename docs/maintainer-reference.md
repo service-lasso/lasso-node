@@ -88,4 +88,8 @@ For an Intel macOS 11 consumer, copy the provider manifest, set `version` to `v2
 
 The [official Node22 build contract](https://github.com/nodejs/node/blob/v22.23.3/BUILDING.md) specifies macOS x64 binaries built with minimum OS 11.0. This binary compatibility does not extend vendor support to an end-of-life operating system. Qualification on actual macOS 11.7.11 is recorded separately from hosted macOS runner tests.
 
-Before extraction the packager validates fresh and cached upstream bytes against the exact official version `SHASUMS256.txt` entry. Package metadata records the upstream SHA-256 and checksum URL. Verification runs extracted `node --version` plus filesystem, cryptography, and local HTTP probes. Source candidates and published assets remain separate acceptance boundaries (SPEC-001 N22-1–N22-4; issue #13).
+Before extraction the packager validates fresh and cached upstream bytes against the exact official version `SHASUMS256.txt` entry. Package metadata records the upstream SHA-256 and checksum URL. Verification runs extracted `node --version` plus filesystem, cryptography, and local HTTP probes. Source candidates and published assets remain separate acceptance boundaries (SPEC-001 N22-1â€“N22-4; issue #13).
+
+## Development candidate publication
+
+After owner authorization for the exact qualified candidate, dispatch `release-development.yml` on `develop` with `candidate_sha` equal to the full current develop SHA. The workflow verifies all nine packages again before its `development-candidate` environment publication job. It publishes `yyyy.m.d-sevenSHA` as a prerelease, leaves latest unchanged, rejects existing tags, and downloads the published assets to verify their checksums. The environment must have the owner-required protection configured before dispatch; agents do not configure or bypass approval.
